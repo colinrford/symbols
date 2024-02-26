@@ -8,13 +8,13 @@ If paired with a library like [gcem](https://gcem.readthedocs.io/en/latest/#) �
 At the end of the slides are some exercises for the reader...
 
 Partial substitution
-  – for now only full substitution works
-  – partial substitution needs more work: e.g. f(a = 5.0, w = 2.5) should generate a new formula
+  - for now only full substitution works
+  - partial substitution needs more work: e.g. f(a = 5.0, w = 2.5) should generate a new formula
 
 Rewriting
-  – Replacing terms by others (rewriting) need also more work: f(x = y / z) should generate a new formula
-  – Simplification based on mathematical concepts
-  – Symbolic calculus (derivatives, integrals)
-  – Full blown custom rule-based rewriting
+  - Replacing terms by others (rewriting) need also more work: f(x = y / z) should generate a new formula
+  - Simplification based on mathematical concepts
+  - Symbolic calculus (derivatives, integrals)
+  - Full blown custom rule-based rewriting
 
-Again, would love to grow this seed. 
+Again, would love to grow this seed.
