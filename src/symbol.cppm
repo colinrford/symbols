@@ -18,14 +18,14 @@
  * "copy-and-pasted" (mostly) from slides by: Colin Ford
  */
 
-// import std :(
-#include <cmath>
-#include <concepts>
-#include <functional>
-#include <memory>
-#include <type_traits>
-#include <utility>
+module;
 
+import std;
+
+export module symbols;
+
+export namespace symbols
+{
 // remove lvalue references
 template <typename T>
 struct remove_lvalue_reference : std::type_identity<T> {};
@@ -95,7 +95,8 @@ struct symbol_id
 };
 
 template <typename Lhs, typename Rhs>
-constexpr std::strong_ordering operator <=>(symbol_id<Lhs>, symbol_id<Rhs>)
+constexpr std::strong_ordering
+operator<=>(symbol_id<Lhs>, symbol_id<Rhs>)
 {
   return std::compare_three_way{}(symbol_id<Lhs>::address,
                                   symbol_id<Rhs>::address);
@@ -295,20 +296,20 @@ struct is_symbolic<symbolic_expression<Operator, Terms...>>
 
 // some operators
 template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<std::plus<void>, Lhs, Rhs> operator+(Lhs, Rhs)
-            noexcept { return {}; }
+constexpr symbolic_expression<std::plus<void>, Lhs, Rhs>
+operator+(Lhs, Rhs) noexcept { return {}; }
 template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<std::minus<void>, Lhs, Rhs> operator-(Lhs, Rhs)
-            noexcept { return {}; }
+constexpr symbolic_expression<std::minus<void>, Lhs, Rhs>
+operator-(Lhs, Rhs) noexcept { return {}; }
 template <symbolic Lhs, symbolic Rhs>
 constexpr symbolic_expression<std::multiplies<void>, Lhs, Rhs>
-          operator*(Lhs, Rhs) noexcept { return {}; }
+operator*(Lhs, Rhs) noexcept { return {}; }
 template <symbolic Lhs, symbolic Rhs>
 constexpr symbolic_expression<std::divides<void>, Lhs, Rhs> operator/(Lhs, Rhs)
-            noexcept { return {}; }
+noexcept { return {}; }
 template <symbolic arg>
 constexpr symbolic_expression<std::negate<void>, arg> operator-(arg)
-            noexcept { return {}; }
+noexcept { return {}; }
 
 /*template <typename T = void>
 struct power
@@ -324,6 +325,7 @@ constexpr symbolic_expression<power<void>, Lhs, Rhs> operator^(Lhs, Rhs)
             noexcept { return {}; }*/
 // end operators
 
+} // end namespace symbols
 
 
 

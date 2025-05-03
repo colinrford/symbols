@@ -30,3 +30,16 @@
 *.exe
 *.out
 *.app
+
+# Misc
+.DS_Store
+build*/
+
+# JetBrains 
+.idea
+cmake-build-*
+
+# cmake
+*.cmake
+CMakeFiles/
+CMakeCache.txt

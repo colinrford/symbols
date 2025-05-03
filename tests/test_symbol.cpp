@@ -1,7 +1,10 @@
 
-#include "symbol.cpp"
-#include <numbers>
-#include <print>
+import std;
+import symbols;
+using namespace symbols;
+
+template <typename T>
+using std_vector = std::vector<T>; // personal preference
 
 struct sin_symbol
 {
@@ -37,27 +40,20 @@ struct power
 
 };
 template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<power<void>, Lhs, Rhs> operator^(Lhs, Rhs)
-            noexcept { return {}; }
-
-/*struct kronecker_delta_symbol
-{
-  template <typename Arg>
-  constexpr auto operator()(Arg&& arg)
-};*/
+constexpr symbolic_expression<power<void>, Lhs, Rhs> operator^(Lhs, Rhs) noexcept { return {}; }
 
 int main()
 {
   constexpr symbol a;
   constexpr constant_symbol<2> two;
   constexpr constant_symbol<3> three;
-  constexpr symbol w;
+  constexpr symbol omega;
   constexpr symbol t;
   constexpr symbol phi;
 
-  constexpr formula f = (a ^ two) * sin(w * t + phi);
+  constexpr formula f = (a ^ two) * sin(omega * t + phi);
 
-  double y = f(a = std::numbers::pi_v<double>, w = 2.5, t = 1.6, phi = 0);
+  double y = f(a = std::numbers::pi_v<double>, omega = 2.5, t = 1.6, phi = 0);
 
   std::println("y = {0}", y);
 
@@ -67,4 +63,5 @@ int main()
   std::println("z = {0}", z);
 
   std::println("y + z = {0}", y + z);
+
 }
