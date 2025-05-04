@@ -21,5 +21,4 @@ target_sources(symbol PUBLIC
         FILES src/symbol.cppm
 )
 target_compile_features(symbol PUBLIC cxx_std_23)
-add_subdirectory(src)
 add_subdirectory(tests)
