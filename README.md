@@ -30,7 +30,7 @@ cd symbols
 then, in the directory `symbols`
 ```
 mkdir build && cd build
-cmake .. -G Ninja -CMAKE_CXX_COMPILER=/path/to/your/modern/compiler
+cmake .. -DCMAKE_CXX_COMPILER=/path/to/your/modern/compiler -G Ninja
 ```
 and so long as this succeeds, run
 ```
