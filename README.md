@@ -36,7 +36,7 @@ and so long as this succeeds, run
 ```
 ninja
 ```
-the only file that is created at this time (May 2, 2025) is the `test_symbol` program in `\tests\` directory. `test_symbol` does not do much besides compute a basic expression.
+the only file that is created at this time (May 2, 2025) is the `test_symbol` program in `tests` directory. `test_symbol` does not do much besides compute a basic expression.
 
 Please excuse any CMake shortcomings, I will try to catch any and fix accordingly.
 
