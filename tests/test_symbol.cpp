@@ -3,9 +3,6 @@ import std;
 import symbols;
 using namespace symbols;
 
-template <typename T>
-using std_vector = std::vector<T>; // personal preference
-
 struct sin_symbol
 {
   template <typename Arg>
@@ -37,10 +34,11 @@ struct power
   constexpr auto operator()(U&& Lhs, V&& Rhs) const
     -> decltype(std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs)))
   { return std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs)); }
-
 };
+
 template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<power<void>, Lhs, Rhs> operator^(Lhs, Rhs) noexcept { return {}; }
+constexpr symbolic_expression<power<void>, Lhs, Rhs>
+operator^(Lhs, Rhs) noexcept { return {}; }
 
 int main()
 {
@@ -63,5 +61,4 @@ int main()
   std::println("z = {0}", z);
 
   std::println("y + z = {0}", y + z);
-
 }

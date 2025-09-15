@@ -1,4 +1,5 @@
 # symbols
+## introduction
 a perhaps primitive compile-time symbolic computation library. Would be great to extend this further.
 
 Can find what is in here from Vincent Reverdy's CppCon 2023 presentation *Symbolic Calculus for High-performance Computing From Scratch Using C++23*, a pdf of which is contained in this repository. [Here](https://www.youtube.com/watch?v=lPfA4SFojao) is a link to the YouTube video. So far I have personally added very little, despite it being quite extensible from the start.
@@ -36,9 +37,9 @@ and so long as this succeeds, run
 ```
 ninja
 ```
-the only file that is created at this time (May 2, 2025) is the `test_symbol` program in `tests` directory. `test_symbol` does not do much besides compute a basic expression.
+the only file that is created at this time (May 2, 2025; September 15, 2025) is the `test_symbol` program in `tests` directory. `test_symbol` does not do much besides compute a basic expression.
 
 Please excuse any CMake shortcomings, I will try to catch any and fix accordingly.
 
 ## examples
-More interesting examples on the way. 
+More interesting examples on the way.

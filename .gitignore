@@ -43,3 +43,4 @@ cmake-build-*
 *.cmake
 CMakeFiles/
 CMakeCache.txt
+CMakeUserPresets.json
