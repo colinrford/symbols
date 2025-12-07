@@ -12,8 +12,8 @@ struct sin_symbol
 
 // function builder
 template <symbolic Arg>
-constexpr symbolic_expression<sin_symbol, Arg> sin(Arg) noexcept
-{ return {}; }
+constexpr symbolic_expression<sin_symbol, Arg> sin(Arg arg) noexcept
+{ return symbolic_expression<sin_symbol, Arg>(arg); }
 
 struct exp_symbol
 {
@@ -24,8 +24,8 @@ struct exp_symbol
 
 // function builder
 template <symbolic Arg>
-constexpr symbolic_expression<exp_symbol, Arg> exp(Arg) noexcept
-{ return {}; }
+constexpr symbolic_expression<exp_symbol, Arg> exp(Arg arg) noexcept
+{ return symbolic_expression<exp_symbol, Arg>(arg); }
 
 template <typename T = void>
 struct power
@@ -36,9 +36,10 @@ struct power
   { return std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs)); }
 };
 
-template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<power<void>, Lhs, Rhs>
-operator^(Lhs, Rhs) noexcept { return {}; }
+// operator^ is now in the library
+//template <symbolic Lhs, symbolic Rhs>
+//constexpr symbolic_expression<power<void>, Lhs, Rhs>
+//operator^(Lhs, Rhs) noexcept { return {}; }
 
 int main()
 {

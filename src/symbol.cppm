@@ -156,7 +156,14 @@ struct symbol
 
   template<typename... Binders>
   constexpr auto operator()(const substitution<Binders...>& s) const
-  { return s[id](); /* <–– everything happens here */ }
+  {
+      constexpr bool is_bound = (std::is_same_v<typename std::remove_reference_t<Binders>::symbol_type, symbol> || ...);
+      if constexpr (is_bound) {
+          return s[id]();
+      } else {
+          return *this;
+      }
+  }
 };
 
 // singleton and address have to stay public data members?
@@ -228,6 +235,12 @@ struct substitution : substitution_base<std::index_sequence_for<Binders...>,
                                  Binders...>;
   using base::base;
   using base::operator[];
+  
+  // Helper to check if a symbol ID is bound
+  template <auto Id>
+  static constexpr bool contains() {
+      return (std::is_same_v<decltype(std::remove_reference_t<Binders>::symbol_type::id), decltype(Id)> || ...);
+  }
 };
 // deduction guide
 template <typename... Binders>
@@ -267,63 +280,134 @@ struct substitution_element
 template <symbolic Expression>
 struct formula
 {
-  using expression = Expression;
+  using expression_type = Expression;
+  Expression expression;
 
-  constexpr formula(Expression expr) noexcept {};
+  constexpr formula(Expression expr) noexcept : expression(expr) {};
+  
   // Call operator where substitution happens
   template <class... Args>
   constexpr auto operator()(Args... args) const noexcept
-  { return expression{}(substitution(args...)); }
+  { 
+      // Create substitution
+      auto sub = substitution(args...);
+      // Evaluate expression with substitution
+      return expression(sub); 
+  }
 };
 
 /*
  *  Construction
  */
 
+// Helper to evaluate a term: if symbolic, call it; otherwise return value
+template <typename Term, typename Substitution>
+constexpr auto evaluate_term(const Term& term, const Substitution& s) {
+    if constexpr (is_symbolic_v<std::remove_cvref_t<Term>>) {
+        return term(s);
+    } else {
+        return term;
+    }
+}
+
 // The class for symbolic expressions
-template <typename Operator, symbolic... Terms>
+template <typename Operator, typename... Terms>
 struct symbolic_expression
 {
+  std::tuple<Terms...> terms;
+  
+  constexpr symbolic_expression(Terms... t) : terms(t...) {}
+
   template <class... Binders>
   constexpr auto operator()(const substitution<Binders...>& s) const noexcept
-  { return Operator{}(Terms{}(s)...); /* <− Everything happens here */ }
+  { 
+      return std::apply([&s](const auto&... t) {
+          return Operator{}(evaluate_term(t, s)...);
+      }, terms);
+  }
+  
+  // Convenience operator for direct substitution arguments (e.g. f(a=1, b=2))
+  template <class... Args>
+  constexpr auto operator()(Args... args) const noexcept
+  { 
+      return (*this)(substitution(args...)); 
+  }
 };
 
 // Making it symbolic
-template <typename Operator, symbolic... Terms>
+template <typename Operator, typename... Terms>
 struct is_symbolic<symbolic_expression<Operator, Terms...>>
         : std::true_type {};
 
-// some operators
-template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<std::plus<void>, Lhs, Rhs>
-operator+(Lhs, Rhs) noexcept { return {}; }
-template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<std::minus<void>, Lhs, Rhs>
-operator-(Lhs, Rhs) noexcept { return {}; }
-template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<std::multiplies<void>, Lhs, Rhs>
-operator*(Lhs, Rhs) noexcept { return {}; }
-template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<std::divides<void>, Lhs, Rhs> operator/(Lhs, Rhs)
-noexcept { return {}; }
-template <symbolic arg>
-constexpr symbolic_expression<std::negate<void>, arg> operator-(arg)
-noexcept { return {}; }
+// Forward declaration for mixed-mode operators support
+template <typename T>
+struct is_symbolic_expression : std::false_type {};
+template <typename Op, typename... Terms>
+struct is_symbolic_expression<symbolic_expression<Op, Terms...>> : std::true_type {};
 
-/*template <typename T = void>
+template <typename T>
+concept symbolic_or_arithmetic = symbolic<T> || std::is_arithmetic_v<T>;
+
+// some operators
+template <symbolic_or_arithmetic Lhs, symbolic_or_arithmetic Rhs>
+requires (symbolic<Lhs> || symbolic<Rhs>)
+constexpr auto operator+(Lhs lhs, Rhs rhs) noexcept { 
+    return symbolic_expression<std::plus<void>, Lhs, Rhs>(lhs, rhs); 
+}
+template <symbolic_or_arithmetic Lhs, symbolic_or_arithmetic Rhs>
+requires (symbolic<Lhs> || symbolic<Rhs>)
+constexpr auto operator-(Lhs lhs, Rhs rhs) noexcept { 
+    return symbolic_expression<std::minus<void>, Lhs, Rhs>(lhs, rhs); 
+}
+template <symbolic_or_arithmetic Lhs, symbolic_or_arithmetic Rhs>
+requires (symbolic<Lhs> || symbolic<Rhs>)
+constexpr auto operator*(Lhs lhs, Rhs rhs) noexcept { 
+    return symbolic_expression<std::multiplies<void>, Lhs, Rhs>(lhs, rhs); 
+}
+template <symbolic_or_arithmetic Lhs, symbolic_or_arithmetic Rhs>
+requires (symbolic<Lhs> || symbolic<Rhs>)
+constexpr auto operator/(Lhs lhs, Rhs rhs)noexcept { 
+    return symbolic_expression<std::divides<void>, Lhs, Rhs>(lhs, rhs); 
+}
+template <symbolic Arg>
+constexpr auto operator-(Arg arg) noexcept { 
+    return symbolic_expression<std::negate<void>, Arg>(arg); 
+}
+
+template <typename T = void>
 struct power
 {
   template <typename U = T, typename V>
   constexpr auto operator()(U&& Lhs, V&& Rhs) const
-    -> decltype(std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs)))
-  { return std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs)); }
-
+  { 
+      if constexpr (std::is_arithmetic_v<std::remove_cvref_t<U>> && std::is_arithmetic_v<std::remove_cvref_t<V>>) {
+          return std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs));
+      } else {
+          // If we are here, we are likely building an expression or partial substitution result
+          // But wait, symbolic_expression calls Operator{} on evaluated terms. 
+          // If terms evaluate to numbers, std::pow is called (above).
+          // If terms evaluate to symbols, we need to return a new symbolic_expression?
+          // This requires the Operator itself to be able to return a symbolic_expression if args are symbolic!
+          // This is a deeper issue: Operator{}(symbol, symbol) must return symbolic_expression.
+          // Standard std::plus etc don't do that.
+          // For now, let's rely on the fact that result of symbolic evaluation is either a number OR a symbolic_expression
+          // If it is a symbolic_expression, we can't easily use std::plus.
+          // We need custom functors or rely on ADL for operator+ on the RESULTS.
+          return std::pow(std::forward<U>(Lhs), std::forward<V>(Rhs)); 
+      }
+  }
 };
-template <symbolic Lhs, symbolic Rhs>
-constexpr symbolic_expression<power<void>, Lhs, Rhs> operator^(Lhs, Rhs)
-            noexcept { return {}; }*/
-// end operators
+// Overload for operators to work on symbolic results?
+// Actually, if evaluate_term returns a symbolic_expression, then Operator{}(expr, expr) is called.
+// std::plus<void>{}(expr, expr) -> returns expr + expr.
+// Since we defined operator+(symbolic, symbolic), it should find it!
+// providing symbolic_expression satisfies 'symbolic' concept.
+
+template <symbolic_or_arithmetic Lhs, symbolic_or_arithmetic Rhs>
+requires (symbolic<Lhs> || symbolic<Rhs>)
+constexpr auto operator^(Lhs lhs, Rhs rhs) noexcept { 
+    return symbolic_expression<power<void>, Lhs, Rhs>(lhs, rhs); 
+}
 
 } // end namespace symbols
 

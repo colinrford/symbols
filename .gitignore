@@ -35,6 +35,10 @@
 .DS_Store
 build*/
 
+# gcc modules
+std.gcm
+gcm.cache
+
 # JetBrains 
 .idea
 cmake-build-*
