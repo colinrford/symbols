@@ -31,9 +31,17 @@
 *.out
 *.app
 
+# video-related
+*.svg
+*.mp4
+
 # Misc
 .DS_Store
 build*/
+
+# gcc modules
+std.gcm
+gcm.cache
 
 # JetBrains 
 .idea
@@ -44,3 +52,7 @@ cmake-build-*
 CMakeFiles/
 CMakeCache.txt
 CMakeUserPresets.json
+
+# Local toolchain files (machine-specific)
+cmake/gcc15-macos-toolchain.cmake
+cmake/homebrew_llvm.cmake

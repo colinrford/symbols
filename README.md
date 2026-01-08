@@ -1,27 +1,15 @@
-# symbols
-## introduction
-a perhaps primitive compile-time symbolic computation library. Would be great to extend this further.
+# `lam.symbols`
 
-Can find what is in here from Vincent Reverdy's CppCon 2023 presentation *Symbolic Calculus for High-performance Computing From Scratch Using C++23*, a pdf of which is contained in this repository. [Here](https://www.youtube.com/watch?v=lPfA4SFojao) is a link to the YouTube video. So far I have personally added very little, despite it being quite extensible from the start.
+## background
+What is in here is an outgrowth of Vincent Reverdy's CppCon 2023 presentation *Symbolic Calculus for High-performance Computing From Scratch Using C++23*, a pdf of which is contained in this repository. [Here](https://www.youtube.com/watch?v=lPfA4SFojao) is a link to the YouTube video.
 
 If paired with a library like [gcem](https://gcem.readthedocs.io/en/latest/#) will allow use for this entirely at compile time, that is, compile within `constexpr` and `consteval` contexts. [Here](https://godbolt.org/z/Gosx441h3) is a working example linked with gcem. The code here uses the Standard Library, so until C++26 (or later), `constexpr` will not compile with certain expressions; but switching between using `std` math or `gcem` math is a matter of replacing `std::` by `gcem::`, so if you feel like making the switch it's immediate – check out the example on godbolt...
 
-At the end of the slides are some exercises for the reader...
-
-Partial substitution
-  - for now only full substitution works
-  - partial substitution needs more work: e.g. `f(a = 5.0, w = 2.5)` should generate a new formula
-
-Rewriting
-  - Replacing terms by others (rewriting) need also more work: `f(x = y / z)` should generate a new formula
-  - Simplification based on mathematical concepts
-  - Symbolic calculus (derivatives, integrals)
-  - Full blown custom rule-based rewriting
-
-Again, would love to grow this seed.
+## introduction
+`lam.symbols` is a c++ module and is a part of [LAM](https://github.com/colinrford/lam). It has been extended from it's original state to implement some of the exercises for the reader left at the end of the original presentation.
 
 ## building
-Really this is a matter of compiling with the `-std=c++23` flag, but since `import std;` finally works in Clang 18 and GCC 15, and with (experimental) cmake support, symbols now comes as a module and builds with module `std`. It's less steps to just compile it on the command line but apparently there are other preferences out there.
+You will need `cmake` `3.31.6` or later, `ninja`, and a compiler that `cmake` supports with `import std;`. `lam.symbols` depends on the c++ standard library.
 
 First of all grab a copy:
 ```
@@ -31,15 +19,34 @@ cd symbols
 then, in the directory `symbols`
 ```
 mkdir build && cd build
-cmake .. -DCMAKE_CXX_COMPILER=/path/to/your/modern/compiler -G Ninja
+cmake .. -G Ninja
 ```
 and so long as this succeeds, run
 ```
 ninja
 ```
-the only file that is created at this time (May 2, 2025; September 15, 2025) is the `test_symbol` program in `tests` directory. `test_symbol` does not do much besides compute a basic expression.
 
-Please excuse any CMake shortcomings, I will try to catch any and fix accordingly.
+Your Cmake mileage may vary, on `macOS` with homebrew-installed `clang++`, `cmake` may not find and link everything properly, and I have had to add more flags in the build commands. You may be able to get away with a simple `cmake ..` and `ninja`.
+
+## usage
+```cpp
+import lam.symbols;
+using namespace lam::symbols;
+
+constexpr symbol x, y;
+constexpr auto expr = (x + y) - y;  // Simplifies to just x at compile time
+
+static_assert(expr(x = 5, y = 10) == 5);  // Verified at compile time!
+```
 
 ## examples
+For now there is but one example included. It computes at compile time the trajectory of Io about Jupiter. An associated Python script will call the `c++` program - the trajectory is already computed - which will print 500 `svg`s; the script converts them with `rsvg-convert` or `inkscape` for feeding into `ffmpeg`, which will stitch the `svg`s together for a short `mp4` video.
+
+The example will not build if it cannot find `rsvg-convert`, `inkscape`, or `ffmpeg`. 
+```bash
+ninja orbital_mechanics
+cd examples/orbital-motion
+python make_video.py
+```
+
 More interesting examples on the way.
