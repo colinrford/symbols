@@ -58,6 +58,7 @@ add_library(lam::symbols ALIAS symbols)
 target_sources(symbols PUBLIC
         FILE_SET CXX_MODULES
         TYPE CXX_MODULES
+        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
         FILES 
             src/symbols.cppm
             src/symbols-traits.cppm
