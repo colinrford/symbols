@@ -24,13 +24,91 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(symbols LANGUAGES CXX)
+project(lam_symbols VERSION 0.2.20260107 LANGUAGES CXX)
 
-add_library(symbol src/symbol.cppm)
-target_sources(symbol PUBLIC
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+find_package(Git)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+else()
+  set(GIT_HASH "unknown")
+endif()
+
+if(CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE MATCHES "^[Dd][Ee][Bb][Uu][Gg]$")
+  set(IS_DEBUG "true")
+else()
+  set(IS_DEBUG "false")
+endif()
+
+configure_file(
+  config.cppm.in
+  ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
+)
+
+add_library(symbols src/symbols.cppm)
+add_library(lam::symbols ALIAS symbols)
+target_sources(symbols PUBLIC
         FILE_SET CXX_MODULES
         TYPE CXX_MODULES
-        FILES src/symbol.cppm
+        FILES 
+            src/symbols.cppm
+            src/symbols-traits.cppm
+            src/symbols-core.cppm
+            src/symbols-engine.cppm
+            src/symbols-operators.cppm
+            ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
 )
-target_compile_features(symbol PUBLIC cxx_std_23)
+target_compile_features(symbols PUBLIC cxx_std_23)
+set_target_properties(symbols PROPERTIES OUTPUT_NAME lam_symbols)
+
+enable_testing()
 add_subdirectory(tests)
+add_subdirectory(examples)
+
+# === INSTALLATION ===
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
+#   Libraries     -> /usr/local/lib/liblam_symbols.a
+#   CMake config  -> /usr/local/lib/cmake/lam_symbols/
+#   C++ modules   -> /usr/local/lib/c++/v1/
+
+install(TARGETS symbols
+  EXPORT lam_symbolsTargets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+  FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/c++/v1
+)
+
+install(EXPORT lam_symbolsTargets
+  FILE lam_symbolsTargets.cmake
+  NAMESPACE lam::
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_symbols
+)
+
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfig.cmake" [[
+include(CMakeFindDependencyMacro)
+include("${CMAKE_CURRENT_LIST_DIR}/lam_symbolsTargets.cmake")
+]])
+
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfigVersion.cmake"
+  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_symbols
+)
