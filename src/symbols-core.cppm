@@ -86,7 +86,7 @@ struct symbol
 
   template <typename Arg> // binding mechanism
   requires Trait::template trait<std::remove_cvref_t<Arg>>::value
-  constexpr symbol_binder<symbol, Arg&&> operator=(Arg&& arg) const
+  constexpr symbol_binder<symbol, Arg&&> operator=(Arg&& arg) const // NOLINT(cppcoreguidelines-c-copy-assignment-signature)
   { return symbol_binder(*this, std::forward<Arg>(arg)); }
 
   template<typename... Binders>
@@ -206,7 +206,7 @@ struct substitution_element
   constexpr const Binder& operator[](id_type) const { return bbinder; }
 
   private:
-  const Binder bbinder;
+  const Binder bbinder; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
 };
 // END substitution
 

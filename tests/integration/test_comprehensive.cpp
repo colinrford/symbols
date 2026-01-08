@@ -9,6 +9,7 @@
 import std;
 import lam.symbols;
 import lam.test.utils;
+
 using namespace lam::symbols;
 using namespace lam::test::utils;
 
@@ -25,7 +26,7 @@ constexpr test_result run_test(const char* name, F&& test_func)
 {
   try
   {
-    bool result = test_func();
+    bool result = std::forward<F>(test_func)();
     return {result, name, result ? "PASSED" : "FAILED"};
   }
   catch (const std::exception& e)
@@ -274,47 +275,60 @@ bool test_rewriting_power()
 
 int main()
 {
-  std::vector<test_result> results;
-
-  results.push_back(run_test("Partial substitution - basic", test_partial_basic));
-  results.push_back(run_test("Partial substitution - returns symbolic", test_partial_returns_symbolic));
-  results.push_back(run_test("Chained partial substitutions", test_chained_partial));
-  results.push_back(run_test("Rewriting - simple", test_rewriting_simple));
-  results.push_back(run_test("Rewriting - complex", test_rewriting_complex));
-  results.push_back(run_test("Mixed rewrite and substitute", test_mixed_rewrite_substitute));
-  results.push_back(run_test("Nested rewriting", test_nested_rewriting));
-  results.push_back(run_test("Commutativity", test_commutativity));
-  results.push_back(run_test("Associativity", test_associativity));
-  results.push_back(run_test("Distributivity", test_distributivity));
-  results.push_back(run_test("Power operations", test_power_operations));
-  results.push_back(run_test("Complex expression", test_complex_expression));
-  results.push_back(run_test("Negation", test_negation));
-  results.push_back(run_test("Division", test_division));
-  results.push_back(run_test("Constant symbols", test_constant_symbols));
-  results.push_back(run_test("Binding override", test_binding_override));
-  results.push_back(run_test("Constant expression", test_constant_expression));
-  results.push_back(run_test("Single symbol", test_single_symbol));
-  results.push_back(run_test("Deep nesting", test_deep_nesting));
-  results.push_back(run_test("Rewriting with power", test_rewriting_power));
-
-  int passed = 0;
-  int failed = 0;
-
-  for (const auto& result : results)
+  try
   {
-    if (result.passed)
+    std::vector<test_result> results;
+
+    results.push_back(run_test("Partial substitution - basic", test_partial_basic));
+    results.push_back(run_test("Partial substitution - returns symbolic", test_partial_returns_symbolic));
+    results.push_back(run_test("Chained partial substitutions", test_chained_partial));
+    results.push_back(run_test("Rewriting - simple", test_rewriting_simple));
+    results.push_back(run_test("Rewriting - complex", test_rewriting_complex));
+    results.push_back(run_test("Mixed rewrite and substitute", test_mixed_rewrite_substitute));
+    results.push_back(run_test("Nested rewriting", test_nested_rewriting));
+    results.push_back(run_test("Commutativity", test_commutativity));
+    results.push_back(run_test("Associativity", test_associativity));
+    results.push_back(run_test("Distributivity", test_distributivity));
+    results.push_back(run_test("Power operations", test_power_operations));
+    results.push_back(run_test("Complex expression", test_complex_expression));
+    results.push_back(run_test("Negation", test_negation));
+    results.push_back(run_test("Division", test_division));
+    results.push_back(run_test("Constant symbols", test_constant_symbols));
+    results.push_back(run_test("Binding override", test_binding_override));
+    results.push_back(run_test("Constant expression", test_constant_expression));
+    results.push_back(run_test("Single symbol", test_single_symbol));
+    results.push_back(run_test("Deep nesting", test_deep_nesting));
+    results.push_back(run_test("Rewriting with power", test_rewriting_power));
+
+    int passed = 0;
+    int failed = 0;
+
+    for (const auto& result : results)
     {
-      std::println("✓ {}: {}", result.name, result.message);
-      passed++;
+      if (result.passed)
+      {
+        std::println("✓ {}: {}", result.name, result.message);
+        passed++;
+      }
+      else
+      {
+        std::println("✗ {}: {} - {}", result.name, result.message, result.message);
+        failed++;
+      }
     }
-    else
-    {
-      std::println("✗ {}: {} - {}", result.name, result.message, result.message);
-      failed++;
-    }
+
+    std::println("\nSummary: {} passed, {} failed out of {} tests", passed, failed, results.size());
+
+    return failed == 0 ? 0 : 1;
   }
-
-  std::println("\nSummary: {} passed, {} failed out of {} tests", passed, failed, results.size());
-
-  return failed == 0 ? 0 : 1;
+  catch (const std::exception& e)
+  {
+    std::println(std::cerr, "Unhandled exception in main: {}", e.what());
+    return 1;
+  }
+  catch (...)
+  {
+    std::println(std::cerr, "Unknown exception in main");
+    return 1;
+  }
 }
