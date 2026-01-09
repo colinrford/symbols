@@ -40,9 +40,9 @@ static_assert(expr(x = 5, y = 10) == 5);  // Verified at compile time!
 ```
 
 ## examples
-For now there is but one example included. It computes at compile time the trajectory of Io about Jupiter. An associated Python script will call the `c++` program - the trajectory is already computed - which will print 500 `svg`s; the script converts them with `rsvg-convert` or `inkscape` for feeding into `ffmpeg`, which will stitch the `svg`s together for a short `mp4` video.
+For now there is but one example included. It computes at compile time the trajectory of Io about Jupiter. An associated Python script will call the `c++` program - the trajectory is already computed - which will print 500 `svg`s; the script converts them with `librsvg` or `inkscape` for feeding into `ffmpeg`, which will stitch the `svg`s together for a short `mp4` video.
 
-The example will not build if it cannot find `rsvg-convert`, `inkscape`, or `ffmpeg`. 
+The example will not build if it cannot find `librsvg`, `inkscape`, or `ffmpeg`. 
 ```bash
 ninja orbital_mechanics
 cd examples/orbital-motion

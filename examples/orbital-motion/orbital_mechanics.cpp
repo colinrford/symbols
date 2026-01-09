@@ -2,7 +2,7 @@
  * orbital_mechanics.cpp
  * Jupiter-Io Orbital Mechanics Example for lam.symbols
  *
- * Demonstrates compile-time trajectory computation using symbolic calculus.
+ * Compile-time computation of trajectory using symbols and finite differences.
  * The entire 500-frame orbital trajectory is computed during compilation,
  * then simply written to SVG files at runtime.
  *
@@ -46,14 +46,14 @@ struct Frame
 };
 
 // ============================================================
-// SYMBOLIC PHYSICS (the lam.symbols showcase!)
+// SYMBOLIC PHYSICS
 // ============================================================
 
 constexpr symbol pos_x;
 constexpr symbol pos_y;
 constexpr symbol gm;
 
-// Symbolic gravitational acceleration (direction component)
+// Symbolic gravitational acceleration
 constexpr auto ax_symbolic = -gm * pos_x;
 constexpr auto ay_symbolic = -gm * pos_y;
 
@@ -104,10 +104,8 @@ consteval auto compute_trajectory()
   return frames;
 }
 
-// Trajectory computed at compile time!
 constexpr auto trajectory = compute_trajectory();
 
-// Compile-time verification
 static_assert(trajectory[0].x == 1.0, "Initial x should be 1.0");
 static_assert(trajectory[0].y == 0.0, "Initial y should be 0.0");
 static_assert(trajectory.size() == NUM_FRAMES, "Should have 500 frames");
