@@ -24,7 +24,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_symbols VERSION 0.2.20260108 LANGUAGES CXX)
+project(lam_symbols VERSION 0.2.20260116 LANGUAGES CXX)
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -49,8 +49,8 @@ else()
 endif()
 
 configure_file(
-  config.cppm.in
-  ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
+  symbols_config.cppm.in
+  ${CMAKE_CURRENT_BINARY_DIR}/symbols_config.cppm
 )
 
 add_library(symbols src/symbols.cppm)
@@ -58,14 +58,14 @@ add_library(lam::symbols ALIAS symbols)
 target_sources(symbols PUBLIC
         FILE_SET CXX_MODULES
         TYPE CXX_MODULES
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}
+        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}
         FILES 
             src/symbols.cppm
             src/symbols-traits.cppm
             src/symbols-core.cppm
             src/symbols-engine.cppm
             src/symbols-operators.cppm
-            ${CMAKE_CURRENT_BINARY_DIR}/config.cppm
+            ${CMAKE_CURRENT_BINARY_DIR}/symbols_config.cppm
 )
 target_compile_features(symbols PUBLIC cxx_std_23)
 set_target_properties(symbols PROPERTIES OUTPUT_NAME lam_symbols)
