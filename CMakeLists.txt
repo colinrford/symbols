@@ -54,7 +54,7 @@ configure_file(
 )
 
 add_library(symbols src/symbols.cppm)
-add_library(lam::symbols ALIAS symbols)
+add_library(lam_symbols::symbols ALIAS symbols)
 target_sources(symbols PUBLIC
         FILE_SET CXX_MODULES
         TYPE CXX_MODULES
@@ -100,6 +100,10 @@ install(EXPORT lam_symbolsTargets
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfig.cmake" [[
 include(CMakeFindDependencyMacro)
 include("${CMAKE_CURRENT_LIST_DIR}/lam_symbolsTargets.cmake")
+# Backward compatibility alias
+if(TARGET lam_symbols::symbols AND NOT TARGET lam::symbols)
+  add_library(lam::symbols ALIAS lam_symbols::symbols)
+endif()
 ]])
 
 write_basic_package_version_file(
