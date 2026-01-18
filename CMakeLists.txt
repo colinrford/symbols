@@ -24,7 +24,36 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_CXX_SCAN_FOR_MODULES ON)
 
-project(lam_symbols VERSION 0.2.20260116 LANGUAGES CXX)
+project(lam_symbols VERSION 0.2.20260118 LANGUAGES CXX)
+
+# Emscripten needs manual __CMAKE::CXX23 target creation since CMake's
+# detection doesn't find the std modules in Emscripten's toolchain
+if(EMSCRIPTEN AND NOT TARGET "__CMAKE::CXX23")
+  set(_emscripten_libcxx_path "/usr/local/Cellar/emscripten/4.0.23/libexec/llvm/share/libc++/v1")
+  if(EXISTS "${_emscripten_libcxx_path}/std.cppm")
+    add_library(__cmake_cxx23 STATIC)
+    target_sources(__cmake_cxx23 INTERFACE "$<$<STREQUAL:$<TARGET_PROPERTY:TYPE>,STATIC_LIBRARY>:$<TARGET_OBJECTS:__cmake_cxx23>>")
+    set_property(TARGET __cmake_cxx23 PROPERTY EXCLUDE_FROM_ALL 1)
+    set_property(TARGET __cmake_cxx23 PROPERTY CXX_SCAN_FOR_MODULES 1)
+    set_property(TARGET __cmake_cxx23 PROPERTY CXX_MODULE_STD 0)
+    target_compile_features(__cmake_cxx23 PUBLIC cxx_std_23)
+    target_compile_options(__cmake_cxx23 PRIVATE -Wno-reserved-module-identifier)
+    target_include_directories(__cmake_cxx23 PRIVATE
+      "${_emscripten_libcxx_path}"
+      "/usr/local/Cellar/emscripten/4.0.23/libexec/cache/sysroot/include/c++/v1"
+      "/usr/local/Cellar/emscripten/4.0.23/libexec/cache/sysroot/include")
+    target_sources(__cmake_cxx23
+      PUBLIC
+      FILE_SET std TYPE CXX_MODULES
+        BASE_DIRS "${_emscripten_libcxx_path}"
+        FILES "${_emscripten_libcxx_path}/std.cppm" "${_emscripten_libcxx_path}/std.compat.cppm")
+    add_library(__CMAKE::CXX23 ALIAS __cmake_cxx23)
+    list(APPEND CMAKE_CXX_COMPILER_IMPORT_STD "23")
+    message(STATUS "Manually created __CMAKE::CXX23 target for Emscripten")
+  else()
+    message(WARNING "Emscripten std.cppm not found at ${_emscripten_libcxx_path}")
+  endif()
+endif()
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -55,6 +84,7 @@ configure_file(
 
 add_library(symbols src/symbols.cppm)
 add_library(lam_symbols::symbols ALIAS symbols)
+add_library(lam::symbols ALIAS symbols)
 target_sources(symbols PUBLIC
         FILE_SET CXX_MODULES
         TYPE CXX_MODULES
