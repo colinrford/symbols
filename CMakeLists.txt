@@ -88,9 +88,13 @@ endif()
 
 target_compile_features(symbols PUBLIC cxx_std_23)
 
-# Consumer dependency: find_package(lam_concepts) + BMI-synthesis property dance.
-lam_find_dependency(lam_concepts)
-target_link_libraries(symbols PUBLIC lam_concepts::concepts)
+# lam.symbols is intentionally STANDALONE: it carries its own copy of the
+# algebraic_traits vocabulary (see the "DUPLICATED CODE" block in
+# src/symbols-engine.cppm), so it does NOT hard-depend on lam.concepts.
+# If that vocabulary is ever re-centralized in lam.concepts, restore:
+#   lam_find_dependency(lam_concepts)
+#   target_link_libraries(symbols PUBLIC lam_concepts::concepts)
+# and add `REQUIRES lam_concepts` to lam_install_module_package below.
 
 set_target_properties(symbols PROPERTIES OUTPUT_NAME lam_symbols)
 
@@ -114,5 +118,4 @@ lam_install_module_package(symbols
   NAME        symbols
   DESCRIPTION "lam.symbols — symbolic calculus engine (C++23 modules)"
   LICENSE     "CC0-1.0"
-  REQUIRES    lam_concepts
 )

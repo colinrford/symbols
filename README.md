@@ -9,24 +9,26 @@ If paired with a library like [gcem](https://gcem.readthedocs.io/en/latest/#) wi
 `lam.symbols` is a c++ module and is a part of [LAM](https://www.github.com/colinrford/lam). It has been extended from it's original state to implement some of the exercises for the reader left at the end of the original presentation.
 
 ## building
-You will need `cmake` `3.31.6` or later, `ninja`, and a compiler that `cmake` supports with `import std;`. `lam.symbols` depends on the c++ standard library.
+You will need
+- `cmake` `3.31.6` or later,
+- `ninja`, and
+- a compiler that `cmake` supports with `import std;`.
+
+`lam.symbols` depends on the c++ standard library. In a future version I plan to move certain things from `lam.symbols` to `lam.concepts`, at which time `lam.symbols` will gain a `lam.concepts` dependency.
 
 First of all grab a copy:
-```
+```bash
 git clone www.github.com/colinrford/symbols
 cd symbols
 ```
 then, in the directory `symbols`
-```
-mkdir build && cd build
-cmake .. -G Ninja
+```bash
+cmake -S . -B build -G Ninja
 ```
 and so long as this succeeds, run
+```bash
+cmake --build build
 ```
-ninja
-```
-
-Your Cmake mileage may vary, on `macOS` with homebrew-installed `clang++`, `cmake` may not find and link everything properly, and I have had to add more flags in the build commands. You may be able to get away with a simple `cmake ..` and `ninja`.
 
 ## usage
 ```cpp
@@ -42,7 +44,7 @@ static_assert(expr(x = 5, y = 10) == 5);  // Verified at compile time!
 ## examples
 For now there is but one example included. It computes at compile time the trajectory of Io about Jupiter. An associated Python script will call the `c++` program - the trajectory is already computed - which will print 500 `svg`s; the script converts them with `librsvg` or `inkscape` for feeding into `ffmpeg`, which will stitch the `svg`s together for a short `mp4` video.
 
-The example will not build if it cannot find `librsvg`, `inkscape`, or `ffmpeg`. 
+The example will not build if it cannot find `librsvg`, `inkscape`, or `ffmpeg`.
 ```bash
 ninja orbital_mechanics
 cd examples/orbital-motion

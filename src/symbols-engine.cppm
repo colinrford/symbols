@@ -22,7 +22,6 @@ export module lam.symbols:engine;
 import :traits;
 import :core;
 
-import lam.concepts;
 import std;
 
 export namespace lam::symbols
@@ -170,11 +169,67 @@ struct is_symbolic<symbolic_expression<Operator, Terms...>> : std::true_type
  */
 } // close lam::symbols for algebraic_traits specializations
 
+// ─────────────────────────────────────────────────────────────────────────
+//  DUPLICATED CODE — algebraic_traits typeclass vocabulary
+//
+//  The block below (primary template + SFINAE detection + has_identity_v /
+//  has_annihilator_v) is a VERBATIM copy of the typeclass that lives in
+//  lam.concepts (lam::concepts::experimental::algebraic_traits, in
+//  concepts/src/experimental/concepts.cppm). It is re-homed here in
+//  lam::symbols::algebra so that lam.symbols builds STANDALONE, with no hard
+//  dependency on lam.concepts at this time.
+//
+//  It is deliberately NOT placed back in lam::concepts::experimental: defining
+//  that module's primary template a second time would ODR-clash whenever a
+//  translation unit imports both lam.symbols and lam.concepts.
+//
+//  >>> KEEP IN SYNC with concepts/src/experimental/concepts.cppm. <<<
+//  FUTURE: once LAM consolidates shared vocabulary centrally (e.g. concepts
+//  graduates algebraic_traits out of :experimental), delete this copy and
+//  depend on the canonical one. See memory: symbols×concepts identity-traits.
+// ─────────────────────────────────────────────────────────────────────────
+export namespace lam::symbols::algebra
+{
+  // Primary template — unspecialized = operation has no declared structure.
+  template<typename Op>
+  struct algebraic_traits
+  {
+    static constexpr bool specialized = false;
+  };
+}
+
+namespace lam::symbols::algebra::internals
+{
+  template<typename Op, typename = void>
+  struct has_identity_trait : std::false_type {};
+  template<typename Op>
+  struct has_identity_trait<Op,
+    std::void_t<typename lam::symbols::algebra::algebraic_traits<Op>::identity_type>>
+    : std::true_type {};
+
+  template<typename Op, typename = void>
+  struct has_annihilator_trait : std::false_type {};
+  template<typename Op>
+  struct has_annihilator_trait<Op,
+    std::void_t<typename lam::symbols::algebra::algebraic_traits<Op>::annihilator_type>>
+    : std::true_type {};
+}
+
+export namespace lam::symbols::algebra
+{
+  template<typename Op>
+  constexpr bool has_identity_v = internals::has_identity_trait<Op>::value;
+  template<typename Op>
+  constexpr bool has_annihilator_v = internals::has_annihilator_trait<Op>::value;
+}
+// ───────────────────────── end DUPLICATED CODE ───────────────────────────
+
 // Declare algebraic structure of std::plus and std::multiplies as
 // they apply to symbolic expressions. These specializations let code
 // outside the engine query identity/annihilator types via
-// algebraic_traits<Op> without reaching into engine internals.
-namespace lam::concepts::experimental
+// lam::symbols::algebra::algebraic_traits<Op> without reaching into engine
+// internals.
+namespace lam::symbols::algebra
 {
 
 template<>
@@ -196,7 +251,7 @@ struct algebraic_traits<std::multiplies<void>>
   using annihilator_type = lam::symbols::constant_symbol<0>;
 };
 
-} // namespace lam::concepts::experimental
+} // namespace lam::symbols::algebra
 
 export namespace lam::symbols
 {
