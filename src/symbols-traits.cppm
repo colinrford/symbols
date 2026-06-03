@@ -17,9 +17,9 @@
 
 module;
 
-import std;
-
 export module lam.symbols:traits;
+
+import std;
 
 export namespace lam::symbols
 {

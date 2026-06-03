@@ -18,12 +18,12 @@
 
 module;
 
-import std;
-
 export module lam.symbols:engine;
 import :traits;
 import :core;
+
 import lam.concepts;
+import std;
 
 export namespace lam::symbols
 {

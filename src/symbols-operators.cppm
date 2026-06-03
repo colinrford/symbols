@@ -17,12 +17,12 @@
 
 module;
 
-import std;
-
 export module lam.symbols:operators;
 import :traits;
 import :core;
 import :engine;
+
+import std;
 
 export namespace lam::symbols
 {
