@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// SPDX-FileCopyrightText: 2025-2026 Colin Ford
+
 /*
  * orbital_mechanics.cpp
  * Jupiter-Io Orbital Mechanics Example for lam.symbols

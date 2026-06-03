@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// SPDX-FileCopyrightText: 2025-2026 Colin Ford
+
 /*
  * identity_vs_simplified.cpp
  * part of test suite for lam.symbols
