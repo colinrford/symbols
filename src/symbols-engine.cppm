@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: CC0-1.0
+// SPDX-FileCopyrightText: 2023 Vincent Reverdy
+// SPDX-FileCopyrightText: 2025-2026 Colin Ford
+
 /*
  * Provided under CC0 1.0 Universal – Public Domain Dedication license
  * Original Author: Vincent Reverdy (LAPP, France)
@@ -14,11 +18,12 @@
 
 module;
 
-import std;
-
 export module lam.symbols:engine;
 import :traits;
 import :core;
+
+import lam.concepts;
+import std;
 
 export namespace lam::symbols
 {
@@ -94,6 +99,7 @@ struct symbolic_expression
 {
   std::tuple<Terms...> terms;
 
+  constexpr symbolic_expression() : terms{} {}
   constexpr symbolic_expression(Terms... t) : terms(t...) {}
 
   // Structural equality
@@ -152,25 +158,80 @@ struct is_symbolic<symbolic_expression<Operator, Terms...>> : std::true_type
  *  Simplification Logic (Strict Type-Based)
  */
 
-// Trait: Check if type is structurally zero (constant_symbol<0>)
-template<typename T>
-struct is_structural_zero : std::false_type
-{};
-template<>
-struct is_structural_zero<constant_symbol<0>> : std::true_type
-{};
-template<typename T>
-constexpr bool is_structural_zero_v = is_structural_zero<std::remove_cvref_t<T>>::value;
+/*
+ *  Operation-parameterized identity and annihilator traits.
+ *
+ *  is_identity<Op, T>:     is T the identity element for binary operation Op?
+ *  is_annihilator<Op, T>:  does T absorb under Op?  (Op(T, X) = T for all X)
+ *
+ *  Constrained partial specializations match any arithmetic zero/one,
+ *  so constant_symbol<0>, constant_symbol<0.>, constant_symbol<0L>, etc.
+ *  are all recognized.
+ */
+} // close lam::symbols for algebraic_traits specializations
 
-// Trait: Check if type is structurally one (constant_symbol<1>)
-template<typename T>
-struct is_structural_one : std::false_type
-{};
+// Declare algebraic structure of std::plus and std::multiplies as
+// they apply to symbolic expressions. These specializations let code
+// outside the engine query identity/annihilator types via
+// algebraic_traits<Op> without reaching into engine internals.
+namespace lam::concepts::experimental
+{
+
 template<>
-struct is_structural_one<constant_symbol<1>> : std::true_type
-{};
+struct algebraic_traits<std::plus<void>>
+{
+  static constexpr bool specialized = true;
+  static constexpr bool commutative = true;
+  static constexpr bool associative = true;
+  using identity_type = lam::symbols::constant_symbol<0>;
+};
+
+template<>
+struct algebraic_traits<std::multiplies<void>>
+{
+  static constexpr bool specialized  = true;
+  static constexpr bool commutative  = true;
+  static constexpr bool associative  = true;
+  using identity_type    = lam::symbols::constant_symbol<1>;
+  using annihilator_type = lam::symbols::constant_symbol<0>;
+};
+
+} // namespace lam::concepts::experimental
+
+export namespace lam::symbols
+{
+
+// --- is_identity ---
+template<typename Op, typename T>
+struct is_identity : std::false_type {};
+
+template<auto V>
+  requires (V == 0)
+struct is_identity<std::plus<void>, constant_symbol<V>> : std::true_type {};
+
+template<auto V>
+  requires (V == 1)
+struct is_identity<std::multiplies<void>, constant_symbol<V>> : std::true_type {};
+
+template<typename Op, typename T>
+constexpr bool is_identity_v = is_identity<Op, std::remove_cvref_t<T>>::value;
+
+// --- is_annihilator ---
+template<typename Op, typename T>
+struct is_annihilator : std::false_type {};
+
+template<auto V>
+  requires (V == 0)
+struct is_annihilator<std::multiplies<void>, constant_symbol<V>> : std::true_type {};
+
+template<typename Op, typename T>
+constexpr bool is_annihilator_v = is_annihilator<Op, std::remove_cvref_t<T>>::value;
+
+// Backward-compatible aliases for the old names
 template<typename T>
-constexpr bool is_structural_one_v = is_structural_one<std::remove_cvref_t<T>>::value;
+constexpr bool is_structural_zero_v = is_identity_v<std::plus<void>, T>;
+template<typename T>
+constexpr bool is_structural_one_v = is_identity_v<std::multiplies<void>, T>;
 
 // Trait: Check if type is "Stateless" (contains no runtime data like int, double)
 template<typename T>
@@ -434,7 +495,10 @@ constexpr auto tuple_replace_impl(Tuple&& t, NewElem&& elem, std::index_sequence
 template<std::size_t I = 0, typename Tuple, typename Term>
 constexpr auto merge_term_into_tuple(Tuple&& tuple, Term&& term)
 {
-  if constexpr (I >= std::tuple_size_v<std::remove_cvref_t<Tuple>>)
+  // Discard additive identity terms before attempting base-matching.
+  if constexpr (is_identity_v<std::plus<void>, std::remove_cvref_t<Term>>)
+    return std::forward<Tuple>(tuple);
+  else if constexpr (I >= std::tuple_size_v<std::remove_cvref_t<Tuple>>)
     return std::tuple_cat(std::forward<Tuple>(tuple), std::make_tuple(std::forward<Term>(term)));
   else
   {
@@ -449,7 +513,7 @@ constexpr auto merge_term_into_tuple(Tuple&& tuple, Term&& term)
     {
       auto new_coeff = simplify_add(CurrTraits::get_coeff(current), TermTraits::get_coeff(term));
 
-      if constexpr (is_structural_zero_v<decltype(new_coeff)>)
+      if constexpr (is_identity_v<std::plus<void>, decltype(new_coeff)>)
         return tuple_remove_impl<Tuple, I>(std::forward<Tuple>(tuple),
                                            std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<Tuple>>>{});
       else
@@ -519,10 +583,10 @@ constexpr auto simplify_add(Lhs&& lhs, Rhs&& rhs)
   else if constexpr (is_plus_expr_v<Rhs>)
     // Commutative merge: merge Lhs (as term) into Rhs (tuple)
     return merge_flat_expression<std::plus<void>>(std::forward<Rhs>(rhs).terms, std::forward<Lhs>(lhs));
-  // Pattern: 0 + x -> x
-  else if constexpr (is_structural_zero_v<Lhs>)
+  // Pattern: 0 + x -> x  (additive identity)
+  else if constexpr (is_identity_v<std::plus<void>, Lhs>)
     return std::forward<Rhs>(rhs);
-  else if constexpr (is_structural_zero_v<Rhs>)
+  else if constexpr (is_identity_v<std::plus<void>, Rhs>)
     return std::forward<Lhs>(lhs);
   else if constexpr (is_constant_symbol_v<Lhs> && is_constant_symbol_v<Rhs>)
     return constant_symbol<std::remove_cvref_t<Lhs>::value + std::remove_cvref_t<Rhs>::value>{};
@@ -535,6 +599,20 @@ constexpr auto simplify_add(Lhs&& lhs, Rhs&& rhs)
   // Pattern: B + (A - B) → A
   else if constexpr (is_minus_expr_v<Rhs> && are_same_symbolic_value_v<Lhs, expr_rhs_t<Rhs>>)
     return expr_lhs_t<Rhs>{};
+  // Pattern: c1*X + c2*X → (c1+c2)*X  (coefficient merging for non-flat terms)
+  else if constexpr (
+    are_same_symbolic_value_v<
+      decltype(term_traits<std::remove_cvref_t<Lhs>>::get_base(std::declval<std::remove_cvref_t<Lhs>>())),
+      decltype(term_traits<std::remove_cvref_t<Rhs>>::get_base(std::declval<std::remove_cvref_t<Rhs>>()))>)
+  {
+    using lhs_traits = term_traits<std::remove_cvref_t<Lhs>>;
+    using rhs_traits = term_traits<std::remove_cvref_t<Rhs>>;
+    auto new_coeff = simplify_add(lhs_traits::get_coeff(lhs), rhs_traits::get_coeff(rhs));
+    if constexpr (is_identity_v<std::plus<void>, decltype(new_coeff)>)
+      return constant_symbol<0>{};
+    else
+      return simplify_mul(new_coeff, lhs_traits::get_base(lhs));
+  }
   else if constexpr (std::is_arithmetic_v<std::remove_cvref_t<Lhs>> && std::is_arithmetic_v<std::remove_cvref_t<Rhs>>)
     return lhs + rhs;
   else
@@ -546,11 +624,11 @@ constexpr auto simplify_add(Lhs&& lhs, Rhs&& rhs)
 template<typename Lhs, typename Rhs>
 constexpr auto simplify_sub(Lhs&& lhs, Rhs&& rhs)
 {
-  if constexpr (is_structural_zero_v<Rhs>)
+  if constexpr (is_identity_v<std::plus<void>, Rhs>)
     return std::forward<Lhs>(lhs);
   else if constexpr (are_same_symbolic_value_v<Lhs, Rhs>)
     return constant_symbol<0>{};
-  else if constexpr (is_structural_zero_v<Lhs>)
+  else if constexpr (is_identity_v<std::plus<void>, Lhs>)
     // 0 - x -> -1 * x
     return simplify_mul(constant_symbol<-1>{}, std::forward<Rhs>(rhs));
   else if constexpr (std::is_arithmetic_v<std::remove_cvref_t<Lhs>> && std::is_arithmetic_v<std::remove_cvref_t<Rhs>>)
@@ -590,14 +668,14 @@ constexpr auto simplify_sub(Lhs&& lhs, Rhs&& rhs)
 template<typename Lhs, typename Rhs>
 constexpr auto simplify_mul(Lhs&& lhs, Rhs&& rhs)
 {
-  // Pattern: 0 * x -> 0, x * 0 -> 0
-  if constexpr (is_structural_zero_v<Lhs> || is_structural_zero_v<Rhs>)
+  // Pattern: 0 * x -> 0, x * 0 -> 0  (multiplicative annihilator)
+  if constexpr (is_annihilator_v<std::multiplies<void>, Lhs> || is_annihilator_v<std::multiplies<void>, Rhs>)
     return constant_symbol<0>{};
-  // Pattern: 1 * x -> x
-  else if constexpr (is_structural_one_v<Lhs>)
+  // Pattern: 1 * x -> x  (multiplicative identity)
+  else if constexpr (is_identity_v<std::multiplies<void>, Lhs>)
     return std::forward<Rhs>(rhs);
-  // Pattern: x * 1 -> x
-  else if constexpr (is_structural_one_v<Rhs>)
+  // Pattern: x * 1 -> x  (multiplicative identity)
+  else if constexpr (is_identity_v<std::multiplies<void>, Rhs>)
     return std::forward<Lhs>(lhs);
   else if constexpr (is_constant_symbol_v<Lhs> && is_constant_symbol_v<Rhs>)
     return constant_symbol<std::remove_cvref_t<Lhs>::value * std::remove_cvref_t<Rhs>::value>{};
@@ -653,7 +731,7 @@ constexpr auto simplify_mul(Lhs&& lhs, Rhs&& rhs)
 template<typename Lhs, typename Rhs>
 constexpr auto simplify_div(Lhs&& lhs, Rhs&& rhs)
 {
-  if constexpr (is_structural_one_v<Rhs>)
+  if constexpr (is_identity_v<std::multiplies<void>, Rhs>)
     return std::forward<Lhs>(lhs);
   else if constexpr (are_same_symbolic_value_v<Lhs, Rhs>)
     return constant_symbol<1>{};
@@ -702,13 +780,13 @@ constexpr auto simplify_div(Lhs&& lhs, Rhs&& rhs)
 template<typename Base, typename Exp>
 constexpr auto simplify_pow(Base&& base, Exp&& exp)
 {
-  if constexpr (is_structural_zero_v<Exp>)
+  if constexpr (is_identity_v<std::plus<void>, Exp>)          // x^0 -> 1
     return constant_symbol<1>{};
-  else if constexpr (is_structural_one_v<Exp>)
+  else if constexpr (is_identity_v<std::multiplies<void>, Exp>) // x^1 -> x
     return std::forward<Base>(base);
-  else if constexpr (is_structural_zero_v<Base>)
+  else if constexpr (is_identity_v<std::plus<void>, Base>)     // 0^n -> 0
     return constant_symbol<0>{};
-  else if constexpr (is_structural_one_v<Base>)
+  else if constexpr (is_identity_v<std::multiplies<void>, Base>) // 1^n -> 1
     return constant_symbol<1>{};
   else if constexpr (std::is_arithmetic_v<std::remove_cvref_t<Base>> && std::is_arithmetic_v<std::remove_cvref_t<Exp>>)
     return std::pow(base, exp);
@@ -733,7 +811,7 @@ struct power
 template<typename Arg>
 constexpr auto simplify_neg(Arg&& arg)
 {
-  if constexpr (is_structural_zero_v<Arg>)
+  if constexpr (is_identity_v<std::plus<void>, Arg>)  // -0 -> 0
     return constant_symbol<0>{};
   else if constexpr (is_negate_expr_v<Arg>)
     // Pattern: -(-x) -> x (using unary negate)

@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: CC0-1.0
+// SPDX-FileCopyrightText: 2023 Vincent Reverdy
+// SPDX-FileCopyrightText: 2025-2026 Colin Ford
+
 /*
  * Provided under CC0 1.0 Universal – Public Domain Dedication license
  * Original Author: Vincent Reverdy (LAPP, France)
@@ -14,10 +18,10 @@
 
 module;
 
-import std;
-
 export module lam.symbols:core;
 import :traits;
+
+import std;
 
 export namespace lam::symbols
 {
