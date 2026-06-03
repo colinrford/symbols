@@ -15,8 +15,6 @@
 
 module;
 
-import std;
-
 export module lam.symbols;
 export import :traits;
 export import :core;
@@ -34,6 +32,8 @@ export import :morphisms;
 export import :calculus.diff;
 #endif
 export import :config;
+
+import std;
 
 // exercises for the reader...
 //  Partial substitution
