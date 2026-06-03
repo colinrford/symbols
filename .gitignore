@@ -47,12 +47,7 @@ gcm.cache
 .idea
 cmake-build-*
 
-# cmake
-*.cmake
 CMakeFiles/
 CMakeCache.txt
 CMakeUserPresets.json
 
-# Local toolchain files (machine-specific)
-cmake/gcc15-macos-toolchain.cmake
-cmake/homebrew_llvm.cmake
