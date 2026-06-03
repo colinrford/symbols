@@ -16,7 +16,9 @@ You will need
 
 `lam.symbols` depends on the c++ standard library. In a future version I plan to move certain things from `lam.symbols` to `lam.concepts`, at which time `lam.symbols` will gain a `lam.concepts` dependency.
 
-First of all grab a copy:
+Alternatively, `lam.symbols` may be consumed as a `conan` package.
+
+Firstly grab a copy:
 ```bash
 git clone www.github.com/colinrford/symbols
 cd symbols
