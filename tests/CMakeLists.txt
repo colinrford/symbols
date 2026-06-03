@@ -46,4 +46,16 @@ create_test(test_comprehensive integration/test_comprehensive.cpp)
 create_test(test_custom_function integration/test_custom_function.cpp)
 create_test(test_coverage_boundary integration/test_coverage_boundary.cpp)
 
+# === Experimental (laws / lawsets / morphisms / calculus) ===
+# These import the experimental partitions, which are only re-exported from
+# lam.symbols when LAM_SYMBOLS_EXPERIMENTAL is ON. Gate the tests on the same
+# flag so a default build stays green.
+if(LAM_SYMBOLS_EXPERIMENTAL)
+  create_test(test_weierstrass_probe integration/test_weierstrass_probe.cpp)
+  create_test(test_laws laws/test_laws.cpp)
+  create_test(test_lawsets laws/test_lawsets.cpp)
+  create_test(test_morphisms morphisms/test_morphisms.cpp)
+  create_test(test_calculus calculus/test_calculus.cpp)
+endif()
+
 add_subdirectory(assembly)

@@ -1,30 +1,17 @@
 
 cmake_minimum_required(VERSION 3.31.6 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 23)
 
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.3)
-  set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
-elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 4.0.0)
-  set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "a9e1cf81-9932-4810-974b-6eccaf14e457")
-elseif(CMAKE_VERSION VERSION_GREATER_EQUAL 3.31.6)
-  set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "0e5b6991-d74f-4b3d-a41c-cf096e0b2508")
-else()
-  message(FATAL_ERROR "Version lower than 3.31.6 not supported (by me)")
-endif()
+# C++23 import-std UUID ladder + standard settings (must precede project()).
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LamCxxModuleStd.cmake)
 
-# from source download: 0e5b6991-d74f-4b3d-a41c-cf096e0b2508
-# works for 3.31.6
-# from github.com: 1942b4fa-b2c5-4546-9385-83f254070067
-# from gitlab.kitware.com: a9e1cf81-9932-4810-974b-6eccaf14e457
-# works for cmake 4.0.1, should work 4.0.2
-# d0edc3af-4c50-42ea-a356-e2862fe7a444 # works for post-4.0.2
+# VERSION file = single source of truth (CMake + Conan read the same string).
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" _lam_symbols_version)
+string(STRIP "${_lam_symbols_version}" _lam_symbols_version)
+project(lam_symbols VERSION ${_lam_symbols_version} LANGUAGES CXX)
 
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
-set(CMAKE_CXX_MODULE_STD ON)
-set(CMAKE_CXX_SCAN_FOR_MODULES ON)
-
-project(lam_symbols VERSION 0.2.20260210 LANGUAGES CXX)
+# Re-run CMake configure whenever VERSION changes.
+set_property(DIRECTORY APPEND PROPERTY
+  CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/VERSION")
 
 # Emscripten needs manual __CMAKE::CXX23 target creation since CMake's
 # detection doesn't find the std modules in Emscripten's toolchain
@@ -60,28 +47,15 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-find_package(Git)
-if(GIT_FOUND)
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-else()
-  set(GIT_HASH "unknown")
-endif()
+# Vendored lam build helpers (lam_add_config_partition, lam_find_dependency,
+# lam_add_config_dump, lam_install_module_package).
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/LamModule.cmake)
 
-if(CMAKE_BUILD_TYPE AND CMAKE_BUILD_TYPE MATCHES "^[Dd][Ee][Bb][Uu][Gg]$")
-  set(IS_DEBUG "true")
-else()
-  set(IS_DEBUG "false")
-endif()
-
-configure_file(
-  symbols_config.cppm.in
-  ${CMAKE_CURRENT_BINARY_DIR}/symbols_config.cppm
-)
+# Experimental partitions (laws / lawsets / morphisms / calculus.diff) are held
+# off the default public surface until they stabilize. When OFF (default) they
+# are not compiled, not installed, and not re-exported from lam.symbols; the
+# matching #ifdef in src/symbols.cppm and the gated tests follow this flag.
+option(LAM_SYMBOLS_EXPERIMENTAL "Build + export the experimental symbols partitions" OFF)
 
 add_library(symbols src/symbols.cppm)
 add_library(lam_symbols::symbols ALIAS symbols)
@@ -89,62 +63,56 @@ add_library(lam::symbols ALIAS symbols)
 target_sources(symbols PUBLIC
         FILE_SET CXX_MODULES
         TYPE CXX_MODULES
-        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_BINARY_DIR}
-        FILES 
+        BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+        FILES
             src/symbols.cppm
             src/symbols-traits.cppm
             src/symbols-core.cppm
             src/symbols-engine.cppm
             src/symbols-operators.cppm
-            ${CMAKE_CURRENT_BINARY_DIR}/symbols_config.cppm
 )
+
+if(LAM_SYMBOLS_EXPERIMENTAL)
+  target_sources(symbols PUBLIC
+          FILE_SET CXX_MODULES
+          TYPE CXX_MODULES
+          BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/src
+          FILES
+              src/symbols-laws.cppm
+              src/symbols-lawsets.cppm
+              src/symbols-morphisms.cppm
+              src/symbols-calculus.diff.cppm
+  )
+  target_compile_definitions(symbols PUBLIC LAM_SYMBOLS_EXPERIMENTAL)
+endif()
+
 target_compile_features(symbols PUBLIC cxx_std_23)
+
+# Consumer dependency: find_package(lam_concepts) + BMI-synthesis property dance.
+lam_find_dependency(lam_concepts)
+target_link_libraries(symbols PUBLIC lam_concepts::concepts)
+
 set_target_properties(symbols PROPERTIES OUTPUT_NAME lam_symbols)
 
+# Generate + attach the lam.symbols:config partition (build-time git_hash refresh).
+lam_add_config_partition(symbols NAME symbols)
+
 enable_testing()
+
+# config_dump smoke test + build-config diagnostic (imports lam.symbols).
+lam_add_config_dump(symbols NAME symbols)
+
 add_subdirectory(tests)
 add_subdirectory(examples)
-
-# === INSTALLATION ===
-include(GNUInstallDirs)
-include(CMakePackageConfigHelpers)
 
 # On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
 #   Libraries     -> /usr/local/lib/liblam_symbols.a
 #   CMake config  -> /usr/local/lib/cmake/lam_symbols/
-#   C++ modules   -> /usr/local/lib/c++/v1/
-
-install(TARGETS symbols
-  EXPORT lam_symbolsTargets
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  FILE_SET CXX_MODULES DESTINATION ${CMAKE_INSTALL_LIBDIR}/c++/v1
-)
-
-install(EXPORT lam_symbolsTargets
-  FILE lam_symbolsTargets.cmake
-  NAMESPACE lam::
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_symbols
-)
-
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfig.cmake" [[
-include(CMakeFindDependencyMacro)
-include("${CMAKE_CURRENT_LIST_DIR}/lam_symbolsTargets.cmake")
-# Backward compatibility alias
-if(TARGET lam_symbols::symbols AND NOT TARGET lam::symbols)
-  add_library(lam::symbols ALIAS lam_symbols::symbols)
-endif()
-]])
-
-write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfigVersion.cmake"
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY SameMajorVersion
-)
-
-install(FILES
-  "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfig.cmake"
-  "${CMAKE_CURRENT_BINARY_DIR}/lam_symbolsConfigVersion.cmake"
-  DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/lam_symbols
+#   C++ modules   -> /usr/local/include/lam/symbols/
+#   CPS metadata  -> /usr/local/lib/cps/
+lam_install_module_package(symbols
+  NAME        symbols
+  DESCRIPTION "lam.symbols — symbolic calculus engine (C++23 modules)"
+  LICENSE     "CC0-1.0"
+  REQUIRES    lam_concepts
 )
