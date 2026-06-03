@@ -106,8 +106,14 @@ enable_testing()
 # config_dump smoke test + build-config diagnostic (imports lam.symbols).
 lam_add_config_dump(symbols NAME symbols)
 
-add_subdirectory(tests)
-add_subdirectory(examples)
+# tests + examples are gated so packaging (e.g. Conan) can skip them: those
+# dirs aren't in the recipe's exports_sources, and the examples pull external
+# tools (librsvg / inkscape / ffmpeg). Default ON for normal local builds.
+option(LAM_SYMBOLS_BUILD_TESTS "Build the tests and examples" ON)
+if(LAM_SYMBOLS_BUILD_TESTS)
+  add_subdirectory(tests)
+  add_subdirectory(examples)
+endif()
 
 # On macOS with -DCMAKE_INSTALL_PREFIX=/usr/local:
 #   Libraries     -> /usr/local/lib/liblam_symbols.a
